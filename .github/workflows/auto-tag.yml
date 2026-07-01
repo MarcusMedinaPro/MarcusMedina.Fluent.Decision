@@ -1,0 +1,50 @@
+name: 🏷️ Auto-Tag on Version Bump
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.csproj'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  auto-tag:
+    runs-on: ubuntu-latest
+    name: Create tag from .csproj version
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version from .csproj
+        id: version
+        run: |
+          CSPROJ=$(find . -name '*.csproj' -not -path '*Test*' -not -path '*Demo*' -not -path '*Example*' -not -path '*example*' -not -path '*UseCase*' -not -path '*usecase*' -not -path '*Sample*' -not -path '*/obj/*' | head -1)
+          VERSION=$(grep -m1 -oP '(?<=<Version>)[^<]+' "$CSPROJ" | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: tag_check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.tag_check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Trigger release pipeline
+        if: steps.tag_check.outputs.exists == 'false'
+        run: gh workflow run release.yml --ref "v${{ steps.version.outputs.version }}"
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}

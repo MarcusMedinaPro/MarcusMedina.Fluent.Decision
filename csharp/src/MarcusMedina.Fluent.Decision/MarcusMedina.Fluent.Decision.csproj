@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <PackageId>MarcusMedina.Fluent.Decision</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Marcus Medina</Authors>
+    <Description>A modern, fluent decision-support toolkit for .NET combining quantitative and qualitative reasoning</Description>
+    <PackageTags>decision;matrix;fluent;builder;analysis;decision-making</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/MarcusMedina/MarcusMedina.Decision</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

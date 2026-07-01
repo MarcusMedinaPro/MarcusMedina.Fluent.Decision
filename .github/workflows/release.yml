@@ -1,0 +1,158 @@
+name: 🚀 Release - Full Pipeline
+
+# ⚙️ SETUP: Replace the two variables below after using this template
+env:
+  SOLUTION_FILE: csharp/PACKAGE_NAME.slnx        # e.g. csharp/MyPackage.slnx
+  PROJECT_PATH: csharp/src/PACKAGE_NAME/PACKAGE_NAME.csproj  # e.g. csharp/src/MyPackage/MyPackage.csproj
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [release, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  security-events: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: 1️⃣ Build & Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore ${{ env.SOLUTION_FILE }}
+        name: Restore
+
+      - run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore
+        name: Build
+
+      - run: dotnet test ${{ env.SOLUTION_FILE }} --configuration Release --no-build --verbosity normal --logger trx
+        name: Test
+
+      - run: dotnet pack ${{ env.PROJECT_PATH }} --configuration Release --no-build --output ./nupkgs
+        name: Pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-packages
+          path: ./nupkgs/*.nupkg
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/TestResults/**/*.trx'
+
+  quality-gate:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    name: 2️⃣ Code Quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore ${{ env.SOLUTION_FILE }}
+        name: Restore
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          queries: security-extended,security-and-quality
+
+      - run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore
+        name: Build for CodeQL
+
+      - uses: github/codeql-action/analyze@v3
+        continue-on-error: true
+
+      - run: dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerability-report.txt
+        name: Dependency Vulnerability Scan
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-reports
+          path: vulnerability-report.txt
+
+  package-signing:
+    needs: quality-gate
+    runs-on: ubuntu-latest
+    name: 3️⃣ Package Signing
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: unsigned-packages
+          path: ./unsigned
+
+      - uses: sigstore/cosign-installer@v3
+
+      - name: Sign packages
+        run: |
+          for pkg in ./unsigned/*.nupkg; do
+            cosign sign-blob "$pkg" \
+              --bundle "${pkg}.sigstore.json" \
+              --yes
+          done
+
+      - name: Generate SHA256 checksums
+        run: |
+          cd unsigned
+          sha256sum *.nupkg > SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-packages
+          path: |
+            ./unsigned/*.nupkg
+            ./unsigned/*.sigstore.json
+            ./unsigned/SHA256SUMS.txt
+
+  publish-nuget:
+    needs: package-signing
+    runs-on: ubuntu-latest
+    name: 4️⃣ Publish to NuGet.org
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-packages
+          path: ./packages
+
+      - name: Publish to NuGet.org
+        run: |
+          dotnet nuget push ./packages/*.nupkg \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./packages/*.nupkg
+            ./packages/*.sigstore.json
+            ./packages/SHA256SUMS.txt
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}

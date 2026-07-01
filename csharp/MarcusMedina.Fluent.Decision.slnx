@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Decision.Demo.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/MarcusMedina.Fluent.Decision/MarcusMedina.Fluent.Decision.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MarcusMedina.Fluent.Decision.Tests/MarcusMedina.Fluent.Decision.Tests.csproj" />
+  </Folder>
+</Solution>
