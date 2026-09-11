@@ -11,7 +11,7 @@
     <Description>A modern, fluent decision-support toolkit for .NET combining quantitative and qualitative reasoning</Description>
     <PackageTags>decision;matrix;fluent;builder;analysis;decision-making</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/MarcusMedina/MarcusMedina.Decision</RepositoryUrl>
+    <RepositoryUrl>https://github.com/MarcusMedinaPro/MarcusMedina.Fluent.Decision</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

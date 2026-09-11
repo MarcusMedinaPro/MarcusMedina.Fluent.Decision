@@ -2,7 +2,7 @@ using MarcusMedina.Fluent.Decision.Core;
 using MarcusMedina.Fluent.Decision.Enums;
 using MarcusMedina.Fluent.Decision.Extensions;
 
-namespace Decision.Demo;
+namespace DecisionDemo;
 
 /// <summary>
 /// Comprehensive demonstration of the MarcusMedina.Decision library.
@@ -291,7 +291,7 @@ internal class Program
             var decision = baseDecision.WithAggregation(method).BuildAndCompute();
             var winner = decision.GetRecommendation();
             
-            Console.WriteLine($"{method,-18}: {winner?.Name ?? "None",-12} (Score: {winner?.TotalScore:F3 ?? 0})");
+            Console.WriteLine($"{method,-18}: {winner?.Name ?? "None",-12} (Score: {winner?.TotalScore ?? 0:F3})");
         }
         Console.WriteLine();
 
