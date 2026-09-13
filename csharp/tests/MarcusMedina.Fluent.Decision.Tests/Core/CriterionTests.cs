@@ -50,13 +50,13 @@ public class CriterionTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithInvalidName_ShouldThrowArgumentException(string invalidName)
+    public void Constructor_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
         // Arrange
         const double weight = 0.5;
 
         // Act
-        var act = () => new Criterion(invalidName, weight);
+        var act = () => new Criterion(invalidName!, weight);
 
         // Assert
         act.Should().Throw<ArgumentException>()

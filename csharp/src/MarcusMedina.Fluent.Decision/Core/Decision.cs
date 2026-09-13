@@ -1,3 +1,4 @@
+using MarcusMedina.Fluent.Decision.Builders;
 using MarcusMedina.Fluent.Decision.Enums;
 using System.Collections;
 using System.Collections.ObjectModel;
@@ -40,6 +41,14 @@ namespace MarcusMedina.Fluent.Decision.Core;
 /// </remarks>
 public sealed record Decision : IFormattable, IEquatable<Decision>, IEnumerable<Option>
 {
+    /// <summary>
+    /// Creates a new <see cref="DecisionBuilder"/> with the specified title.
+    /// </summary>
+    /// <param name="title">The title of the decision.</param>
+    /// <returns>A new <see cref="DecisionBuilder"/> instance.</returns>
+    /// <exception cref="ArgumentException">Thrown when title is null or empty.</exception>
+    public static DecisionBuilder Create(string title) => new(title);
+
     /// <summary>Gets the title/name of this decision.</summary>
     public string Title { get; init; }
     
@@ -297,7 +306,7 @@ public sealed record Decision : IFormattable, IEquatable<Decision>, IEnumerable<
             Criteria: {Criteria.Count} ({string.Join(", ", Criteria.Select(c => $"{c.Name} ({c.Weight:P0})"))})
             Options: {Options.Count}
             Aggregation: {Aggregation}
-            Recommendation: {recommendation?.Name ?? "None"} (Score: {recommendation?.TotalScore:F3 ?? 0})
+            Recommendation: {recommendation?.Name ?? "None"} (Score: {recommendation?.TotalScore ?? 0:F3})
             Computed: {IsComputed}
             """;
     }

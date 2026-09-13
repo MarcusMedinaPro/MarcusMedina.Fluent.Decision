@@ -56,10 +56,10 @@ public class OptionTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithInvalidName_ShouldThrowArgumentException(string invalidName)
+    public void Constructor_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
         // Act
-        var act = () => new Option(invalidName);
+        var act = () => new Option(invalidName!);
 
         // Assert
         act.Should().Throw<ArgumentException>()

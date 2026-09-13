@@ -1,8 +1,10 @@
 # Changelog
 
-All notable changes to `FluentBuilders.Decision` will be documented in this file.
+All notable changes to `MarcusMedina.Fluent.Decision` will be documented in this file.
 
-## [Unreleased]
+## [1.0.0] - Unreleased
 
-- Initial project scaffolding in `_WIP_`.
-- Documentation baseline added.
+- Weighted multi-criteria decision analysis with a fluent builder API.
+- Normalization strategies for cost and benefit criteria (Linear, InverseLinear).
+- Option comparison, ranking, and sensitivity analysis.
+- Report generation via `Decision.Analyze()` / `Decision.GenerateReport()`.
