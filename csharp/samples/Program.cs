@@ -8,6 +8,41 @@ namespace DecisionDemo;
 /// Comprehensive demonstration of the MarcusMedina.Decision library.
 /// Shows various decision-making scenarios with different approaches and features.
 /// </summary>
+/// <remarks>
+/// Fluent API cheat sheet — what the parameters below actually mean:
+///
+/// .WithCriterion(name, weight, normalization, description?)
+///   name          - label shown in output, e.g. "Price".
+///   weight        - this criterion's share of the total score. All weights on a
+///                   decision should sum to 1.0 (e.g. 0.4 + 0.3 + 0.3).
+///   normalization - how raw scores are rescaled before weighting:
+///                     Linear        higher raw score = better (e.g. quality 0-10)
+///                     InverseLinear lower raw score = better (e.g. price, latency)
+///                     Logarithmic   for values that vary by orders of magnitude
+///                     SquareRoot    milder scaling than Linear
+///                     None          use the raw score as-is, no rescaling
+///   description   - optional free-text note, purely for humans reading the output.
+///
+/// .WithOption(name, notes?)
+///   name  - the thing being evaluated, e.g. "Italian Bistro".
+///   notes - optional free-text note.
+///
+/// .WithScore(criterionName, value, confidence, notes?)
+///   criterionName - must match a name passed to WithCriterion earlier.
+///   value         - the raw score for this option on that criterion, on
+///                   whatever scale you chose (e.g. 1-10, or actual price in €).
+///   confidence    - how sure you are about this specific number:
+///                     VeryLow, Low, Medium, High, VeryHigh.
+///                   Doesn't affect the score itself, just recorded for later review.
+///   notes         - optional free-text note.
+///
+/// .WithAggregation(type) - how per-criterion scores combine into one final score:
+///   WeightedAverage  standard: score * weight, summed (the usual choice)
+///   GeometricMean    penalizes options that are weak on any single criterion
+///   HarmonicMean     penalizes very low scores even more strongly
+///   MinScore         conservative: only the worst criterion counts
+///   MaxScore         optimistic: only the best criterion counts
+/// </remarks>
 internal class Program
 {
     private static void Main(string[] args)
