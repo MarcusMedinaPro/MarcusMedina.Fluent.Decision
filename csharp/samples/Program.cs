@@ -55,6 +55,7 @@ internal class Program
         DemonstrateTechnologyChoice();
         DemonstrateCarPurchaseDecision();
         DemonstrateJobOfferComparison();
+        DemonstrateTennisWeatherDecision();
         DemonstrateSensitivityAnalysis();
         DemonstrateAggregationMethods();
 
@@ -236,6 +237,47 @@ internal class Program
         {
             Console.WriteLine("✅ Decision validation passed");
         }
+        Console.WriteLine();
+    }
+
+    /// <summary>
+    /// The classic "Play Tennis" dataset (Outlook / Temperature / Humidity / Wind)
+    /// is a staple of decision TREE teaching (Mitchell's ID3 example) — it classifies
+    /// a single day as Yes/No by splitting on categorical attributes.
+    ///
+    /// This library builds decision MATRICES, not trees: it ranks a set of options
+    /// against weighted, numeric criteria — a different technique for a different
+    /// kind of question. So instead of pretending to reproduce a tree split, this
+    /// borrows the same four weather attributes and asks the matrix's actual
+    /// question: "given how each day's weather scores, which day is the better
+    /// choice to play?" Two days are lifted from the textbook table (day 3, a
+    /// classic "Yes", and day 6, a classic "No") to keep the comparison honest.
+    /// </summary>
+    private static void DemonstrateTennisWeatherDecision()
+    {
+        Console.WriteLine("🎾 Weather Decision: Best Day to Play Tennis");
+        Console.WriteLine("---------------------------------------------");
+
+        var decision = Decision.Create("Which Day Should I Play Tennis?")
+            .WithContext("Comparing two forecast days using the classic Outlook/Temperature/Humidity/Wind attributes")
+            .WithCriterion("Outlook", 0.30, NormalizationType.Linear, "Sky condition: clearer/overcast scores higher, rain scores low")
+            .WithCriterion("Temperature", 0.20, NormalizationType.Linear, "Comfort while playing")
+            .WithCriterion("Humidity", 0.25, NormalizationType.InverseLinear, "Raw humidity level - lower is more comfortable")
+            .WithCriterion("Wind", 0.25, NormalizationType.InverseLinear, "Raw wind strength - calmer is easier to play in")
+            .WithOption("Wednesday (Overcast, Hot, High Humidity, Weak Wind)")
+                .WithScore("Outlook", 9.0, ConfidenceLevel.High, "Overcast - no glare, no rain")
+                .WithScore("Temperature", 6.0, ConfidenceLevel.Medium, "Hot but tolerable")
+                .WithScore("Humidity", 8.0, ConfidenceLevel.High, "High humidity")
+                .WithScore("Wind", 2.0, ConfidenceLevel.High, "Weak wind - easy rallies")
+            .WithOption("Thursday (Rain, Cool, Normal Humidity, Strong Wind)")
+                .WithScore("Outlook", 2.0, ConfidenceLevel.High, "Rain - court likely wet")
+                .WithScore("Temperature", 7.0, ConfidenceLevel.Medium, "Cool and comfortable")
+                .WithScore("Humidity", 3.0, ConfidenceLevel.High, "Normal humidity")
+                .WithScore("Wind", 8.0, ConfidenceLevel.High, "Strong wind - hard to control shots")
+            .WithAggregation(AggregationType.WeightedAverage)
+            .BuildAndCompute();
+
+        Console.WriteLine(decision.GenerateReport(includeDetails: false));
         Console.WriteLine();
     }
 
