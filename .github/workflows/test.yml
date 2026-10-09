@@ -1,5 +1,7 @@
-# Full kvalitetskontroll på test-grenen — körs innan merge till main.
-# Säkerhetsscanners körs i separata workflows (security-code-scan.yml, osv-scanner.yml).
+# Full test-svit (unit + e2e + action-tester) på test-grenen — körs innan merge till main.
+# Säkerhetsscanners (security-code-scan.yml, osv-scanner.yml) körs INTE här längre —
+# de flyttades till main/tagg för att undvika att skanna kod som ändå kan ändras
+# innan publicering. Se develop.yml för det snabbare kodkvalitets-mellansteget.
 
 name: 🔍 Test — Full Quality Gate
 
@@ -15,7 +17,10 @@ permissions:
   security-events: write
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: |
+    8.0.x
+    9.0.x
+    10.0.x
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 

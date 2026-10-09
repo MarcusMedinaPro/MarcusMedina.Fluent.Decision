@@ -1,8 +1,9 @@
 name: 🚀 Release - Full Pipeline
 
+# ⚙️ SETUP: Replace the two variables below after using this template
 env:
-  SOLUTION_FILE: csharp/MarcusMedina.Fluent.Decision.slnx
-  PROJECT_PATH: csharp/src/MarcusMedina.Fluent.Decision/MarcusMedina.Fluent.Decision.csproj
+  SOLUTION_FILE: csharp/MarcusMedina.Fluent.Decision.slnx        # e.g. csharp/MyPackage.slnx
+  PROJECT_PATH: csharp/src/MarcusMedina.Fluent.Decision/MarcusMedina.Fluent.Decision.csproj  # e.g. csharp/src/MyPackage/MyPackage.csproj
 
 on:
   push:
@@ -11,21 +12,38 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  security-events: write
-  packages: write
-  id-token: write
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     name: 1️⃣ Build & Test
+    permissions:
+      contents: read
     steps:
+      - name: 🛡️ Guard — release tag must be on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A v* tag publishes regardless of branch, so refuse tags whose commit is not on main.
+          # compare main...<sha>: identical|behind = on main (ok), ahead|diverged = not on main.
+          status=$(gh api "repos/${{ github.repository }}/compare/main...${{ github.sha }}" --jq .status) || {
+            echo "::error::Could not verify that ${GITHUB_REF_NAME} is on main - refusing to release."; exit 1; }
+          echo "Tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) vs main: ${status}"
+          case "$status" in
+            identical|behind) ;;
+            *) echo "::error::Tag ${GITHUB_REF_NAME} points at a commit that is not on main (${status}). Merge to main via PR, then tag the commit on main."; exit 1 ;;
+          esac
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
 
       - run: dotnet restore ${{ env.SOLUTION_FILE }}
         name: Restore
@@ -54,6 +72,9 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     name: 2️⃣ Code Quality
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +85,7 @@ jobs:
       - run: dotnet restore ${{ env.SOLUTION_FILE }}
         name: Restore
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: csharp
           queries: security-extended,security-and-quality
@@ -72,7 +93,7 @@ jobs:
       - run: dotnet build ${{ env.SOLUTION_FILE }} --configuration Release --no-restore
         name: Build for CodeQL
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         continue-on-error: true
 
       - run: dotnet list package --vulnerable --include-transitive 2>&1 | tee vulnerability-report.txt
@@ -121,11 +142,59 @@ jobs:
             ./unsigned/*.sigstore.json
             ./unsigned/SHA256SUMS.txt
 
-  publish-nuget:
+  antivirus-scan:
     needs: package-signing
     runs-on: ubuntu-latest
-    name: 4️⃣ Publish to NuGet.org
+    name: 4️⃣ Antivirus Scan
+    permissions:
+      contents: read
+    env:
+      VT_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: signed-packages
+          path: ./packages
+
+      - name: VirusTotal scan
+        # Skipped in private repos: the free VirusTotal key shares uploaded files with its community
+        if: env.VT_KEY != '' && !github.event.repository.private
+        uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f # v4
+        id: virustotal
+        continue-on-error: true
+        with:
+          vt_api_key: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          files: ./packages/*.nupkg
+          vt_monitor: false
+
+      - name: Save scan summary
+        run: |
+          {
+            echo "VirusTotal scan - $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "Outcome: ${{ steps.virustotal.outcome }}"
+            echo "Analysis: ${{ steps.virustotal.outputs.analysis || 'n/a' }}"
+            echo
+            echo "Outcome 'skipped' means no VIRUSTOTAL_API_KEY, or the repo is private (nothing is uploaded)."
+            echo
+            echo "Advisory, not a hard gate - a single obscure AV engine flagging a freshly"
+            echo "built .NET assembly is a common false positive. Review the analysis link"
+            echo "above before publishing if the outcome is anything but a clean pass."
+          } > virustotal-summary.txt
+          cat virustotal-summary.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scan-results
+          path: virustotal-summary.txt
+
+  publish-nuget:
+    needs: antivirus-scan
+    runs-on: ubuntu-latest
+    name: 5️⃣ Publish to NuGet.org
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
 

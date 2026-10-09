@@ -1,0 +1,73 @@
+# SAST for C# via the SecurityCodeScan Roslyn analyzer (NuGet), run on Linux.
+# Replaces the old windows-only security-code-scan-add-action, which only
+# understands .NET Framework projects and breaks on SDK-style .NET projects.
+# The analyzer is injected at build time (nothing is committed to the repo's csproj files)
+# and results are written as SARIF: always saved as an artifact, and uploaded to
+# GitHub Code Scanning when the repo supports it (public, or Advanced Security enabled).
+
+name: SecurityCodeScan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '19 5 * * 6'    # Weekly scan of main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  SCS:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build source projects with SecurityCodeScan
+        run: |
+          mkdir -p "$RUNNER_TEMP/sarif"
+          cat > "$RUNNER_TEMP/scs.props" <<'PROPS'
+          <Project>
+            <ItemGroup>
+              <PackageReference Include="SecurityCodeScan.VS2019" Version="5.6.7" PrivateAssets="all" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
+            </ItemGroup>
+          </Project>
+          PROPS
+          shopt -s globstar nullglob
+          count=0
+          for proj in csharp/src/**/*.csproj; do
+            case "$proj" in *Demo*|*Example*|*Sample*|*Test*|*/obj/*) continue ;; esac
+            name=$(basename "$proj" .csproj)
+            dotnet build "$proj" --configuration Release \
+              -p:CustomBeforeDirectoryBuildProps="$RUNNER_TEMP/scs.props" \
+              "-p:ErrorLog=$RUNNER_TEMP/sarif/$name.sarif%2cversion=2.1"
+            count=$((count + 1))
+          done
+          [ "$count" -gt 0 ] || { echo "::error::No source projects found under csharp/src"; exit 1; }
+
+      - name: Summarize findings
+        run: |
+          total=$(cat "$RUNNER_TEMP"/sarif/*.sarif | grep -o '"ruleId": *"SCS[0-9]*"' | wc -l)
+          echo "SecurityCodeScan findings: $total" | tee -a "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP"/sarif/*.sarif | grep -o '"ruleId": *"SCS[0-9]*"' | sort | uniq -c | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: security-code-scan-sarif
+          path: ${{ runner.temp }}/sarif/*.sarif
+
+      - name: Upload SARIF to Code Scanning
+        if: ${{ !github.event.repository.private }}   # private repos without Advanced Security reject SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: ${{ runner.temp }}/sarif
+          category: security-code-scan
