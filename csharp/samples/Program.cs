@@ -2,12 +2,47 @@ using MarcusMedina.Fluent.Decision.Core;
 using MarcusMedina.Fluent.Decision.Enums;
 using MarcusMedina.Fluent.Decision.Extensions;
 
-namespace Decision.Demo;
+namespace DecisionDemo;
 
 /// <summary>
 /// Comprehensive demonstration of the MarcusMedina.Decision library.
 /// Shows various decision-making scenarios with different approaches and features.
 /// </summary>
+/// <remarks>
+/// Fluent API cheat sheet — what the parameters below actually mean:
+///
+/// .WithCriterion(name, weight, normalization, description?)
+///   name          - label shown in output, e.g. "Price".
+///   weight        - this criterion's share of the total score. All weights on a
+///                   decision should sum to 1.0 (e.g. 0.4 + 0.3 + 0.3).
+///   normalization - how raw scores are rescaled before weighting:
+///                     Linear        higher raw score = better (e.g. quality 0-10)
+///                     InverseLinear lower raw score = better (e.g. price, latency)
+///                     Logarithmic   for values that vary by orders of magnitude
+///                     SquareRoot    milder scaling than Linear
+///                     None          use the raw score as-is, no rescaling
+///   description   - optional free-text note, purely for humans reading the output.
+///
+/// .WithOption(name, notes?)
+///   name  - the thing being evaluated, e.g. "Italian Bistro".
+///   notes - optional free-text note.
+///
+/// .WithScore(criterionName, value, confidence, notes?)
+///   criterionName - must match a name passed to WithCriterion earlier.
+///   value         - the raw score for this option on that criterion, on
+///                   whatever scale you chose (e.g. 1-10, or actual price in €).
+///   confidence    - how sure you are about this specific number:
+///                     VeryLow, Low, Medium, High, VeryHigh.
+///                   Doesn't affect the score itself, just recorded for later review.
+///   notes         - optional free-text note.
+///
+/// .WithAggregation(type) - how per-criterion scores combine into one final score:
+///   WeightedAverage  standard: score * weight, summed (the usual choice)
+///   GeometricMean    penalizes options that are weak on any single criterion
+///   HarmonicMean     penalizes very low scores even more strongly
+///   MinScore         conservative: only the worst criterion counts
+///   MaxScore         optimistic: only the best criterion counts
+/// </remarks>
 internal class Program
 {
     private static void Main(string[] args)
@@ -20,6 +55,7 @@ internal class Program
         DemonstrateTechnologyChoice();
         DemonstrateCarPurchaseDecision();
         DemonstrateJobOfferComparison();
+        DemonstrateTennisWeatherDecision();
         DemonstrateSensitivityAnalysis();
         DemonstrateAggregationMethods();
 
@@ -204,6 +240,47 @@ internal class Program
         Console.WriteLine();
     }
 
+    /// <summary>
+    /// The classic "Play Tennis" dataset (Outlook / Temperature / Humidity / Wind)
+    /// is a staple of decision TREE teaching (Mitchell's ID3 example) — it classifies
+    /// a single day as Yes/No by splitting on categorical attributes.
+    ///
+    /// This library builds decision MATRICES, not trees: it ranks a set of options
+    /// against weighted, numeric criteria — a different technique for a different
+    /// kind of question. So instead of pretending to reproduce a tree split, this
+    /// borrows the same four weather attributes and asks the matrix's actual
+    /// question: "given how each day's weather scores, which day is the better
+    /// choice to play?" Two days are lifted from the textbook table (day 3, a
+    /// classic "Yes", and day 6, a classic "No") to keep the comparison honest.
+    /// </summary>
+    private static void DemonstrateTennisWeatherDecision()
+    {
+        Console.WriteLine("🎾 Weather Decision: Best Day to Play Tennis");
+        Console.WriteLine("---------------------------------------------");
+
+        var decision = Decision.Create("Which Day Should I Play Tennis?")
+            .WithContext("Comparing two forecast days using the classic Outlook/Temperature/Humidity/Wind attributes")
+            .WithCriterion("Outlook", 0.30, NormalizationType.Linear, "Sky condition: clearer/overcast scores higher, rain scores low")
+            .WithCriterion("Temperature", 0.20, NormalizationType.Linear, "Comfort while playing")
+            .WithCriterion("Humidity", 0.25, NormalizationType.InverseLinear, "Raw humidity level - lower is more comfortable")
+            .WithCriterion("Wind", 0.25, NormalizationType.InverseLinear, "Raw wind strength - calmer is easier to play in")
+            .WithOption("Wednesday (Overcast, Hot, High Humidity, Weak Wind)")
+                .WithScore("Outlook", 9.0, ConfidenceLevel.High, "Overcast - no glare, no rain")
+                .WithScore("Temperature", 6.0, ConfidenceLevel.Medium, "Hot but tolerable")
+                .WithScore("Humidity", 8.0, ConfidenceLevel.High, "High humidity")
+                .WithScore("Wind", 2.0, ConfidenceLevel.High, "Weak wind - easy rallies")
+            .WithOption("Thursday (Rain, Cool, Normal Humidity, Strong Wind)")
+                .WithScore("Outlook", 2.0, ConfidenceLevel.High, "Rain - court likely wet")
+                .WithScore("Temperature", 7.0, ConfidenceLevel.Medium, "Cool and comfortable")
+                .WithScore("Humidity", 3.0, ConfidenceLevel.High, "Normal humidity")
+                .WithScore("Wind", 8.0, ConfidenceLevel.High, "Strong wind - hard to control shots")
+            .WithAggregation(AggregationType.WeightedAverage)
+            .BuildAndCompute();
+
+        Console.WriteLine(decision.GenerateReport(includeDetails: false));
+        Console.WriteLine();
+    }
+
     private static void DemonstrateSensitivityAnalysis()
     {
         Console.WriteLine("📈 Advanced Analysis: Sensitivity Testing");
@@ -291,7 +368,7 @@ internal class Program
             var decision = baseDecision.WithAggregation(method).BuildAndCompute();
             var winner = decision.GetRecommendation();
             
-            Console.WriteLine($"{method,-18}: {winner?.Name ?? "None",-12} (Score: {winner?.TotalScore:F3 ?? 0})");
+            Console.WriteLine($"{method,-18}: {winner?.Name ?? "None",-12} (Score: {winner?.TotalScore ?? 0:F3})");
         }
         Console.WriteLine();
 

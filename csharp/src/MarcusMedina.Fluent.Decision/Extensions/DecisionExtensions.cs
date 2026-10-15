@@ -200,38 +200,6 @@ public static class DecisionExtensions
 }
 
 /// <summary>
-/// Static entry point for creating decisions using fluent syntax.
-/// </summary>
-/// <remarks>
-/// <para>
-/// <strong>Purpose:</strong> Provides a clean, discoverable entry point for the Decision fluent API.
-/// </para>
-/// <para>
-/// <strong>Example:</strong>
-/// <code>
-/// var decision = Decision.Create("My Decision")
-///     .WithCriterion("Factor 1", 0.6)
-///     .WithCriterion("Factor 2", 0.4)
-///     // ... add options and scores
-///     .Build();
-/// </code>
-/// </para>
-/// </remarks>
-public static class Decision
-{
-    /// <summary>
-    /// Creates a new DecisionBuilder with the specified title.
-    /// </summary>
-    /// <param name="title">The title of the decision.</param>
-    /// <returns>A new DecisionBuilder instance.</returns>
-    /// <exception cref="ArgumentException">Thrown when title is null or empty.</exception>
-    public static DecisionBuilder Create(string title)
-    {
-        return new DecisionBuilder(title);
-    }
-}
-
-/// <summary>
 /// Represents the results of a decision analysis.
 /// </summary>
 public sealed record DecisionAnalysis(Core.Decision Decision)

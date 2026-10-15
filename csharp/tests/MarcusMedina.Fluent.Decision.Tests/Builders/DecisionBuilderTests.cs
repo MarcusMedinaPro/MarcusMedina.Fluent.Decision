@@ -28,10 +28,10 @@ public class DecisionBuilderTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithInvalidTitle_ShouldThrowArgumentException(string invalidTitle)
+    public void Constructor_WithInvalidTitle_ShouldThrowArgumentException(string? invalidTitle)
     {
         // Act
-        var act = () => new DecisionBuilder(invalidTitle);
+        var act = () => new DecisionBuilder(invalidTitle!);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -70,13 +70,13 @@ public class DecisionBuilderTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void WithCriterion_WithInvalidName_ShouldThrowArgumentException(string invalidName)
+    public void WithCriterion_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
         // Arrange
         var builder = new DecisionBuilder("Test Decision");
 
         // Act
-        var act = () => builder.WithCriterion(invalidName, 0.5);
+        var act = () => builder.WithCriterion(invalidName!, 0.5);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -133,13 +133,13 @@ public class DecisionBuilderTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void WithOption_WithInvalidName_ShouldThrowArgumentException(string invalidName)
+    public void WithOption_WithInvalidName_ShouldThrowArgumentException(string? invalidName)
     {
         // Arrange
         var builder = new DecisionBuilder("Test Decision");
 
         // Act
-        var act = () => builder.WithOption(invalidName);
+        var act = () => builder.WithOption(invalidName!);
 
         // Assert
         act.Should().Throw<ArgumentException>()

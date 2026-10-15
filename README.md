@@ -6,6 +6,8 @@
 
 **Fluent API for structured decision analysis in C#**
 
+I detta fall ville jag förenkla användandet av beslutsmatriser och flerkriterieanalys. Weighted scoring, kriterier, options — för alla gånger du behöver fatta ett välinformerat beslut i kod.
+
 Model criteria, rank options, compare trade-offs, and compute recommendations with a readable builder-based API.
 
 ## Installation

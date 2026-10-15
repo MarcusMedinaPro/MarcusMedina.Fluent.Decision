@@ -13,24 +13,28 @@ name: OSV-Scanner
 
 on:
   pull_request:
-    branches: [test]
+    branches: [main]
   merge_group:
-    branches: [test]
+    branches: [main]
   schedule:
     - cron: '45 5 * * 6'    # Veckoscan mot main
   workflow_dispatch:
   push:
-    branches: [test]
+    branches: [main]
 
 permissions:
+  actions: read
   security-events: write
   contents: read
 
 jobs:
   scan-scheduled:
     if: ${{ github.event_name == 'push' || github.event_name == 'schedule' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@1f1242919d8a60496dd1874b24b62b2370ed4c78" # v1.7.1
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67" # v2.5.1
     with:
+      # Private repos without Advanced Security reject SARIF uploads and would fail the job.
+      # Vulnerabilities still fail the check (fail-on-vuln defaults to true).
+      upload-sarif: ${{ !github.event.repository.private }}
       scan-args: |-
         -r
         --skip-git
@@ -38,8 +42,11 @@ jobs:
 
   scan-pr:
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@1f1242919d8a60496dd1874b24b62b2370ed4c78" # v1.7.1
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@6e4298ebc4db23e847df9b2e2de2939d6f066c67" # v2.5.1
     with:
+      # Private repos without Advanced Security reject SARIF uploads and would fail the job.
+      # Vulnerabilities still fail the check (fail-on-vuln defaults to true).
+      upload-sarif: ${{ !github.event.repository.private }}
       scan-args: |-
         -r
         --skip-git
