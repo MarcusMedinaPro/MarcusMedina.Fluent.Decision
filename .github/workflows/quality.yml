@@ -1,0 +1,47 @@
+# Snabb statisk kodkvalitet på quality-grenen — mellansteg mellan dev och test.
+# Ger snabbare feedback tillbaka till dev om formattering/analyzers klagar,
+# utan att behöva vänta på hela e2e-sviten i test.yml.
+# Ingen signering, inga säkerhetsskannrar här — de körs först vid main/tagg.
+
+name: 🧹 Quality — Static Analysis
+
+on:
+  push:
+    branches: [quality]
+  pull_request:
+    branches: [quality]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    name: Code Quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+        working-directory: ./csharp
+
+      - name: Verify formatting
+        run: dotnet format --verify-no-changes --severity warn
+        working-directory: ./csharp
+
+      - name: Build with analyzers as errors
+        run: dotnet build --configuration Release --no-restore -warnaserror
+        working-directory: ./csharp
