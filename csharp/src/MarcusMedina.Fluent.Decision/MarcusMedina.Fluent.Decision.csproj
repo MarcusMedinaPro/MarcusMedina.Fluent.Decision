@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>MarcusMedina.Fluent.Decision</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Marcus Medina</Authors>
     <Description>A modern, fluent decision-support toolkit for .NET combining quantitative and qualitative reasoning</Description>
     <PackageTags>decision;matrix;fluent;builder;analysis;decision-making</PackageTags>
